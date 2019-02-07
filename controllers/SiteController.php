@@ -2,11 +2,7 @@
 
 namespace app\controllers;
 
-use app\models\User;
-use PhpAmqpLib\Connection\AMQPStreamConnection;
-use PhpAmqpLib\Message\AMQPMessage;
 use Yii;
-use yii\base\Model;
 use yii\filters\AccessControl;
 use yii\web\Controller;
 use yii\web\Response;

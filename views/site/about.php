@@ -1,5 +1,4 @@
 <?php
-use PhpAmqpLib\Connection\AMQPConnection;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
 $host = 'bear.rmq.cloudamqp.com';
