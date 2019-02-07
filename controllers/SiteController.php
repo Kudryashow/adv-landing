@@ -127,14 +127,14 @@ class SiteController extends Controller
      */
     public function actionAbout()
     {
-        $connection = new AMQPStreamConnection('localhost', 8080, 'guest', 'guest');
-        $channel = $connection->channel();
-        $channel->queue_declare('hello', false, false, false, false);
-        $msg = new  AMQPMessage('Hello world');
-        $channel->basic_publish($msg, '', 'hello');
-        echo "[x] Sent 'Hello world' \n";
-        $channel->close();
-        $connection->close();
+//        $connection = new AMQPStreamConnection('localhost', 8080, 'guest', 'guest');
+//        $channel = $connection->channel();
+//        $channel->queue_declare('hello', false, false, false, false);
+//        $msg = new  AMQPMessage('Hello world');
+//        $channel->basic_publish($msg, '', 'hello');
+//        echo "[x] Sent 'Hello world' \n";
+//        $channel->close();
+//        $connection->close();
         return $this->render('about' );
     }
 }

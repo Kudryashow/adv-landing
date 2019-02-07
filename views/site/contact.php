@@ -1,68 +1,49 @@
 <?php
+use PhpAmqpLib\Connection\AMQPStreamConnection;
+use PhpAmqpLib\Message\AMQPMessage;
 
-/* @var $this yii\web\View */
-/* @var $form yii\bootstrap\ActiveForm */
-/* @var $model app\models\ContactForm */
+$host = 'bear.rmq.cloudamqp.com';
+$port = 5672;
+$user = 'ogkhqcqq';
+$pass = '5lN8AHG4y3zy6KsXlR4rF3UQwXto6pf7';
+$vhost = 'ogkhqcqq';
+$exchange = 'subscribers';
+$queue = 'gurucoder_subscribers';
 
-use yii\helpers\Html;
-use yii\bootstrap\ActiveForm;
-use yii\captcha\Captcha;
+$connection = new AMQPStreamConnection($host, $port, $user, $pass, $user);
+$channel = $connection->channel();
 
-$this->title = 'Contact';
-$this->params['breadcrumbs'][] = $this->title;
-?>
-<div class="site-contact">
-    <h1><?= Html::encode($this->title) ?></h1>
+$channel->queue_declare($queue, false, false, false, false);
+$channel->exchange_declare($exchange, 'direct', false, true, false);
+$channel->queue_bind($queue, $exchange);
 
-    <?php if (Yii::$app->session->hasFlash('contactFormSubmitted')): ?>
+function process_message(AMQPMessage $message)
+{
+    $messageBody = json_decode($message->body);
+    $email =  $messageBody->email;
 
-        <div class="alert alert-success">
-            Thank you for contacting us. We will respond to you as soon as possible.
-        </div>
+    file_put_contents($email . '.json', $message->body);
 
-        <p>
-            Note that if you turn on the Yii debugger, you should be able
-            to view the mail message on the mail panel of the debugger.
-            <?php if (Yii::$app->mailer->useFileTransport): ?>
-                Because the application is in development mode, the email is not sent but saved as
-                a file under <code><?= Yii::getAlias(Yii::$app->mailer->fileTransportPath) ?></code>.
-                Please configure the <code>useFileTransport</code> property of the <code>mail</code>
-                application component to be false to enable email sending.
-            <?php endif; ?>
-        </p>
+    echo "\n--------\n";
+    echo $message->body;
+    echo "\n--------\n";
+    $message->delivery_info['channel']->basic_ack($message->delivery_info['delivery_tag']);
+    if ($message->body === 'quit') {
+        $message->delivery_info['channel']->basic_cancel($message->delivery_info['consumer_tag']);
+    }
+}
+$consumerTag = 'local.ubuntu.consumer';
 
-    <?php else: ?>
+$channel->basic_consume($queue, $consumerTag, false, false, false, false, 'process_message');
 
-        <p>
-            If you have business inquiries or other questions, please fill out the following form to contact us.
-            Thank you.
-        </p>
+function shutdown ($channel, $connection)
+{
+    $channel->close();
+    $connection->close();
+}
 
-        <div class="row">
-            <div class="col-lg-5">
+register_shutdown_function('shutdown', $channel, $connection);
 
-                <?php $form = ActiveForm::begin(['id' => 'contact-form']); ?>
-
-                    <?= $form->field($model, 'name')->textInput(['autofocus' => true]) ?>
-
-                    <?= $form->field($model, 'email') ?>
-
-                    <?= $form->field($model, 'subject') ?>
-
-                    <?= $form->field($model, 'body')->textarea(['rows' => 6]) ?>
-
-                    <?= $form->field($model, 'verifyCode')->widget(Captcha::className(), [
-                        'template' => '<div class="row"><div class="col-lg-3">{image}</div><div class="col-lg-6">{input}</div></div>',
-                    ]) ?>
-
-                    <div class="form-group">
-                        <?= Html::submitButton('Submit', ['class' => 'btn btn-primary', 'name' => 'contact-button']) ?>
-                    </div>
-
-                <?php ActiveForm::end(); ?>
-
-            </div>
-        </div>
-
-    <?php endif; ?>
-</div>
+while (count($channel->callbacks)) {
+    $channel->wait();
+}

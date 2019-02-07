@@ -1,30 +1,30 @@
 <?php
-use app\widgets\HelloWidget;
-use yii\bootstrap\ActiveForm;
-use yii\bootstrap\Progress;
-use yii\captcha\Captcha;
-use yii\helpers\Html;
+use PhpAmqpLib\Connection\AMQPConnection;
+use PhpAmqpLib\Connection\AMQPStreamConnection;
+use PhpAmqpLib\Message\AMQPMessage;
+$host = 'bear.rmq.cloudamqp.com';
+$port = 5672;
+$user = 'ogkhqcqq';
+$pass = '5lN8AHG4y3zy6KsXlR4rF3UQwXto6pf7';
+$vhost = 'ogkhqcqq';
+$exchange = 'subscribers';
+$queue = 'gurucoder_subscribers';
 
-?>
-<?php HelloWidget::begin(); ?>
+$connection = new AMQPStreamConnection($host, $port, $user, $pass, $user);
+$channel = $connection->channel();
 
-    sample content that may contain one or more <strong>HTML</strong> <pre>tags</pre>
+$channel->queue_declare($queue, false, false, false, false);
+$channel->exchange_declare($exchange, 'direct', false, true, false);
+$channel->queue_bind($queue, $exchange);
 
-    If this content grows too big, use sub views
+$messageBody = json_encode([
+    'email' => 'john.doe@derp.com',
+   'subscribed' => true
+]);
 
-    For e.g.
-
-<?php HelloWidget::end(); ?>
-<?php $form = ActiveForm::begin(['id' => 'contact-form']); ?>
-<?php echo \kartik\widgets\RangeInput::widget([
-    'name' => 'brightness',
-    'html5Options' => ['min' => 0, 'max' => 1, 'step' => 1],
-    'options' => ['placeholder' => 'Control brightness...'],
-    'addon' => ['append' => ['content' => '%']],
-]); ?>
-
-<div class = "form-group">
-    <?= Html::submitButton('Submit', ['class' => 'btn btn-primary',
-        'name' => 'contact-button']) ?>
-</div>
-<?php ActiveForm::end(); ?>
+$message = new AMQPMessage($messageBody, [
+    'content_type' => 'application/json',
+    'delivery_mode' => AMQPMessage::DELIVERY_MODE_PERSISTENT]);
+$channel->basic_publish($message, $exchange);
+$channel->close();
+$connection->close();
